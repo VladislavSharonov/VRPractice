@@ -28,8 +28,15 @@ public class Door : MonoBehaviour
     private void FixedUpdate()
     {
         if (Math.Abs(joint.angle) > lockedAngle || Math.Abs(handle.angle) > maxHandleLockedAngle)
+        {
             joint.limits = angleLimit;
+            if (TryGetComponent<FixedJoint>(out FixedJoint fixedJoint))
+                Destroy(fixedJoint);
+        }
         else if (joint.limits.min != joint.limits.max)
+        {
             joint.limits = zeroAngleLimits;
+            gameObject.AddComponent<FixedJoint>();
+        }
     }
 }

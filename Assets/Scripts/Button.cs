@@ -1,19 +1,23 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 [RequireComponent(typeof(ConfigurableJoint))]
 public class Button : MonoBehaviour
 {
-    [SerializeField][Range(0f, 1f)]
-    private float threshold = 0f;
+    [SerializeField]
+    [Tooltip("Offset up to which the button is not pressed (always less than \"Actuation offset\")")]
+    private float deadzone = 0.025f;
 
     [SerializeField]
-    private float deadzone = 0f;
+    [Tooltip("Offset after which the button is pressed (always greater than \"deadzone\")")]
+    private float actuationOffset = 0.1f;
 
-    public delegate void ButtonHandler();
-    public event ButtonHandler OnReleased;
-    public event ButtonHandler OnPressed;
+    [Header("Events")]
+    [SerializeField]
+    private UnityEvent OnReleased;
+
+    [SerializeField]
+    private UnityEvent OnPressed;
 
     private ConfigurableJoint joint;
     private Vector3 startPosition;
@@ -22,29 +26,31 @@ public class Button : MonoBehaviour
     private void Start()
     {
         joint = GetComponent<ConfigurableJoint>();
-        startPosition = transform.position;
-
-//#if UNITY_EDITOR
-        OnPressed += () => Debug.Log("Button is pressed");
-        OnReleased += () => Debug.Log("Button is released");
-//#endif
-
-        OnPressed += () => isPressed = true;
-        OnReleased += () => isPressed = false;
+        startPosition = transform.localPosition;
     }
 
     private void FixedUpdate()
     {
-        CheckState();
+        var offset = Vector3.Distance(startPosition, transform.localPosition) / joint.linearLimit.limit;
+        offset = Mathf.Abs(offset) < deadzone ? 0 : Mathf.Clamp(offset, 0f, 1f);
+
+        if (!isPressed && offset + actuationOffset >= 1)
+            Pressed();
+        else if (isPressed && offset - actuationOffset <= 0)
+            Released();
     }
 
-    private void CheckState()
+    private void Pressed()
     {
-        var offset = Vector3.Distance(startPosition, transform.localPosition) / joint.linearLimit.limit;
+        isPressed = true;
+        OnPressed?.Invoke();
+        Debug.Log("1");
+    }
 
-        if (!isPressed && offset + threshold >= 1)
-            OnPressed?.Invoke();
-        else if (isPressed && offset - threshold <= 0)
-            OnReleased?.Invoke();
+    private void Released()
+    {
+        isPressed = false;
+        OnReleased?.Invoke();
+        Debug.Log("2");
     }
 }
